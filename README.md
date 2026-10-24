@@ -44,3 +44,4 @@ se reemplaza cada función por un `fetch` a la ruta correspondiente, devolviendo
 ## Publicar
 Proyecto separado de la web pública: repo propio en GitHub → proyecto nuevo en Vercel → dominio `portal.kinima.uy`.
 `vercel.json` hace que las rutas funcionen al recargar.
+
