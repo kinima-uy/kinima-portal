@@ -32,8 +32,8 @@ createRoot(document.getElementById("root")).render(
             <Route path="/ejercicios" element={<Ejercicios />} />
             <Route path="/consolas" element={<Consolas />} />
             <Route path="/profesionales" element={<RequireAuth admin><Profesionales /></RequireAuth>} />
-            <Route path="*" element={<div className="page"><Empty icon="alerta" title="Esta página no existe"><Link to="/pacientes">Volver a pacientes</Link></Empty></div>} />
           </Route>
+          <Route path="*" element={<div className="page"><Empty icon="alerta" title="Esta página no existe"><Link to="/pacientes">Volver a pacientes</Link></Empty></div>} />
         </Routes>
       </Router>
     </AuthProvider>

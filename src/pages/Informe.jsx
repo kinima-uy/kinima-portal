@@ -6,7 +6,10 @@ import { Logo } from "../lib/brand.jsx";
 import { Loading, ErrorBox, Icon } from "../components/ui.jsx";
 import { CurvaProgreso, MapaAlcance } from "../components/viz.jsx";
 import { Metas, Rutina } from "../components/clinica.jsx";
-import { ANIMOS } from "../data/mock.js";
+import { configTexto } from "../data/ejercicios.js";
+import { ANIMOS } from "../data/ejercicios.js";
+import { CAP } from "../lib/api.js";
+import { ritmo, avg } from "../lib/modelo.js";
 
 const DIA = 864e5;
 
@@ -22,9 +25,9 @@ export default function Informe() {
 
   const desde = Date.now() - semanas * 7 * DIA;
   const ses = p.sesiones.filter((s) => new Date(s.fecha).getTime() >= desde);
-  const prom = ses.length ? Math.round(ses.reduce((t, s) => t + s.puntaje, 0) / ses.length) : null;
+  const prom = avg(ses.map(ritmo));
   const minutosTot = Math.round(ses.reduce((t, s) => t + s.duracionSeg, 0) / 60);
-  const esperadas = p.objetivoSemanal * semanas;
+  const esperadas = p.objetivoSemanal ? p.objetivoSemanal * semanas : null;
   const cambios = p.historial.filter((h) => new Date(h.creada).getTime() >= desde);
   const animos = Object.entries(ANIMOS).map(([k, a]) => [a, ses.filter((s) => s.animo === k).length]).filter(([, n]) => n);
   const comentarios = ses.filter((s) => s.comentarioFamilia);
@@ -32,13 +35,13 @@ export default function Informe() {
   return (
     <div className="page informe-page">
       <div className="informe-bar no-print">
-        <Link className="back" to={`/pacientes/${p.id}`}><Icon name="atras" size={16} />Volver a {p.id}</Link>
+        <Link className="back" to={`/pacientes/${p.id}`}><Icon name="atras" size={16} />Volver a {p.codigo}</Link>
         <div className="informe-opts">
           <label className="field inline"><span>Período</span>
             <select value={semanas} onChange={(e) => setSemanas(+e.target.value)}>{[2, 4, 8, 12].map((n) => <option key={n} value={n}>Últimas {n} semanas</option>)}</select>
           </label>
-          <label className="check"><input type="checkbox" checked={incluir.notas} onChange={(e) => setIncluir({ ...incluir, notas: e.target.checked })} />Incluir notas</label>
-          <label className="check"><input type="checkbox" checked={incluir.familia} onChange={(e) => setIncluir({ ...incluir, familia: e.target.checked })} />Incluir comentarios de la familia</label>
+          {CAP.notas && <label className="check"><input type="checkbox" checked={incluir.notas} onChange={(e) => setIncluir({ ...incluir, notas: e.target.checked })} />Incluir notas</label>}
+          {CAP.animo && <label className="check"><input type="checkbox" checked={incluir.familia} onChange={(e) => setIncluir({ ...incluir, familia: e.target.checked })} />Incluir comentarios de la familia</label>}
           <button className="btn btn-navy" onClick={() => window.print()}><Icon name="descargar" size={18} />Guardar como PDF</button>
         </div>
         <p className="muted small">En la ventana de impresión elegí “Guardar como PDF” como destino.</p>
@@ -48,16 +51,17 @@ export default function Informe() {
         <header className="inf-head">
           <Logo height={30} />
           <div>
-            <h1>Informe de seguimiento · {p.id}</h1>
-            <p>{p.edad} años · {p.plan}</p>
-            <p className="muted">{fecha(new Date(desde).toISOString(), { day: "numeric", month: "long" })} al {fecha(new Date().toISOString(), { day: "numeric", month: "long", year: "numeric" })} · {p.profesional?.nombre}, {p.profesional?.especialidad}</p>
+            <h1>Informe de seguimiento · {p.codigo}</h1>
+            <p>{p.edad ? `${p.edad} años · ` : ""}{p.etiqueta}</p>
+            <p className="muted">{fecha(new Date(desde).toISOString(), { day: "numeric", month: "long" })} al {fecha(new Date().toISOString(), { day: "numeric", month: "long", year: "numeric" })}{p.profesional ? ` · ${p.profesional.nombre}${p.profesional.especialidad ? `, ${p.profesional.especialidad}` : ""}` : ""}</p>
           </div>
         </header>
 
         <section className="inf-nums">
-          <div><b>{ses.length}<small>/{esperadas}</small></b><span>Sesiones realizadas</span></div>
-          <div><b>{Math.min(100, Math.round((ses.length / esperadas) * 100))}<small>%</small></b><span>Constancia</span></div>
-          <div><b>{prom ?? "—"}<small>pts</small></b><span>Puntaje promedio</span></div>
+          <div><b>{ses.length}{esperadas && <small>/{esperadas}</small>}</b><span>Sesiones realizadas</span></div>
+          {esperadas ? <div><b>{Math.min(100, Math.round((ses.length / esperadas) * 100))}<small>%</small></b><span>Constancia</span></div>
+            : <div><b>{ses.reduce((t, s) => t + s.aciertos, 0)}</b><span>Aciertos en total</span></div>}
+          <div><b>{prom ?? "—"}<small>/min</small></b><span>Aciertos por minuto</span></div>
           <div><b>{minutosTot}<small>min</small></b><span>Tiempo de juego</span></div>
         </section>
 
@@ -66,16 +70,16 @@ export default function Informe() {
           <CurvaProgreso sesiones={ses} marcas={p.historial} fijo />
         </section>
 
-        <div className="inf-cols">
-          <section className="inf-sec">
+        {(CAP.metas || CAP.alcance) && <div className="inf-cols">
+          {CAP.metas && <section className="inf-sec">
             <h2>Objetivos terapéuticos</h2>
             <Metas p={p} soloLectura onCambio={() => {}} />
-          </section>
-          <section className="inf-sec">
+          </section>}
+          {CAP.alcance && <section className="inf-sec">
             <h2>Mapa de alcance</h2>
             <MapaAlcance puntos={p.alcance} />
-          </section>
-        </div>
+          </section>}
+        </div>}
 
         <div className="inf-cols">
           <section className="inf-sec">
@@ -84,7 +88,7 @@ export default function Informe() {
           </section>
           <section className="inf-sec">
             <h2>Cambios de rutina en el período</h2>
-            {cambios.length ? <ul className="inf-list">{cambios.map((c) => <li key={c.id}><b>{fecha(c.creada)} · v{c.version}</b> {c.motivo}</li>)}</ul> : <p className="muted">Sin cambios en este período.</p>}
+            {cambios.length ? <ul className="inf-list">{cambios.map((c) => <li key={c.id}><b>{fecha(c.creada)} · v{c.version}</b> {c.motivo || configTexto(c.bloques[0])}</li>)}</ul> : <p className="muted">Sin cambios en este período.</p>}
           </section>
         </div>
 

@@ -45,7 +45,7 @@ export default function Layout() {
         </nav>
         <div className="sb-user">
           <span className="avatar" aria-hidden="true">{iniciales}</span>
-          <div><b>{profesional.nombre}</b><small>{profesional.especialidad}</small></div>
+          <div><b>{profesional.nombre}</b><small>{profesional.especialidad || (profesional.rol === "admin" ? "Administración" : "Profesional")}</small></div>
           <button className="icon-btn" onClick={salir} aria-label="Cerrar sesión" title="Cerrar sesión"><Icon name="salir" /></button>
         </div>
       </aside>

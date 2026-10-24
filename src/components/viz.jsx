@@ -5,10 +5,11 @@
  * Colores de datos validados para daltonismo: logrado #0F9A90 · no logrado #E25B42, y siempre con forma distinta.
  */
 import { useEffect, useRef, useState } from "react";
-import { fecha, hora, minutos } from "../lib/util.js";
+import { fecha, hora } from "../lib/util.js";
 import { Iso, COLORS } from "../lib/brand.jsx";
 import { Empty } from "./ui.jsx";
-import { ANIMOS } from "../data/mock.js";
+import { ANIMOS, duracionTexto } from "../data/ejercicios.js";
+import { ritmo } from "../lib/modelo.js";
 
 export const HIT = "#0F9A90", MISS = "#E25B42";
 
@@ -36,7 +37,13 @@ function smooth(pts) {
   return d;
 }
 
-/* Curva de progreso: puntaje por sesión con área degradada y tooltip. */
+/* Tope "redondo" para el eje: 10, 20, 25, 40, 50, 80, 100… */
+function tope(max) {
+  const m = Math.max(5, max), p = 10 ** Math.floor(Math.log10(m));
+  return [1, 2, 2.5, 4, 5, 8, 10].map((k) => k * p).find((v) => v >= m);
+}
+
+/* Curva de progreso: aciertos por sesión con área degradada y tooltip. */
 export function CurvaProgreso({ sesiones, marcas = [], max, fijo }) {
   const [ref, w] = useWidth();
   const [hover, setHover] = useState(null);
@@ -44,8 +51,9 @@ export function CurvaProgreso({ sesiones, marcas = [], max, fijo }) {
   const data = fijo ? sesiones : sesiones.slice(-(max || (w < 480 ? 8 : 14)));
   const H = w < 480 ? 190 : 240, L = 30, R = 12, T = 16, B = 28;
   const x = (i) => L + (data.length === 1 ? (w - L - R) / 2 : (i * (w - L - R)) / (data.length - 1));
-  const y = (v) => T + (H - T - B) * (1 - v / 100);
-  const pts = data.map((s, i) => [x(i), y(s.puntaje)]);
+  const top = tope(Math.max(...data.map((s) => s.aciertos)));
+  const y = (v) => T + (H - T - B) * (1 - v / top);
+  const pts = data.map((s, i) => [x(i), y(s.aciertos)]);
   const line = smooth(pts);
   const area = `${line} L${pts.at(-1)[0]},${y(0)} L${pts[0][0]},${y(0)} Z`;
   const h = hover != null ? data[hover] : null;
@@ -60,14 +68,14 @@ export function CurvaProgreso({ sesiones, marcas = [], max, fijo }) {
 
   return (
     <figure className="chart" ref={ref}>
-      <svg width={w} height={H} viewBox={`0 0 ${w} ${H}`} role="img" aria-label={`Curva de puntaje de las últimas ${data.length} sesiones`}>
+      <svg width={w} height={H} viewBox={`0 0 ${w} ${H}`} role="img" aria-label={`Aciertos de las últimas ${data.length} sesiones`}>
         <defs>
           <linearGradient id="area" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0" stopColor="#55BDB5" stopOpacity=".38" />
             <stop offset="1" stopColor="#55BDB5" stopOpacity="0" />
           </linearGradient>
         </defs>
-        {[0, 50, 100].map((v) => (
+        {[0, top / 2, top].map((v) => (
           <g key={v}>
             <line x1={L} x2={w - R} y1={y(v)} y2={y(v)} stroke="var(--line)" strokeDasharray={v ? "3 5" : ""} />
             <text x={L - 8} y={y(v) + 4} textAnchor="end" className="axis">{v}</text>
@@ -89,7 +97,7 @@ export function CurvaProgreso({ sesiones, marcas = [], max, fijo }) {
             <circle cx={pts[i][0]} cy={pts[i][1]} r={hover === i ? 7 : 5}
               fill={s.sincronizada ? HIT : "var(--white)"} stroke={s.sincronizada ? "var(--white)" : "#B07D12"} strokeWidth="2.5" strokeDasharray={s.sincronizada ? "" : "3 2"} />
             <rect x={pts[i][0] - step / 2} y={T} width={step} height={H - T - B} fill="transparent" tabIndex="0"
-              aria-label={`${fecha(s.fecha)}: ${s.puntaje} puntos${s.sincronizada ? "" : ", sin sincronizar"}`}
+              aria-label={`${fecha(s.fecha)}: ${s.aciertos} aciertos${s.sincronizada ? "" : ", sin sincronizar"}`}
               onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)} onFocus={() => setHover(i)} onBlur={() => setHover(null)} />
           </g>
         ))}
@@ -97,9 +105,9 @@ export function CurvaProgreso({ sesiones, marcas = [], max, fijo }) {
       </svg>
       {h && (
         <div className="tip" style={{ left: Math.min(Math.max(pts[hover][0], 90), w - 90), top: pts[hover][1] - 12 }}>
-          <b>{h.puntaje} puntos</b>
+          <b>{h.aciertos} aciertos</b>
           <span>{fecha(h.fecha, { weekday: "short", day: "numeric", month: "short" })} · {hora(h.fecha)}</span>
-          <span>{h.aciertos}/{h.objetivos} objetivos · {minutos(h.duracionSeg)} min</span>
+          <span>{ritmo(h)} por minuto · {duracionTexto(h.duracionSeg)}{h.completa ? "" : " · no la terminó"}</span>
           {!h.sincronizada && <span>Guardada en la consola, sin sincronizar</span>}
           {h.animo && <span>{ANIMOS[h.animo].emoji} {ANIMOS[h.animo].t}{h.comentarioFamilia ? ` · “${h.comentarioFamilia}”` : ""}</span>}
         </div>
@@ -149,7 +157,7 @@ export function MapaAlcance({ puntos, mano }) {
       <figcaption className="legend">
         <span><i className="dot" style={{ background: HIT }} />Logrado ({total})</span>
         <span><i className="dot dot-miss" />No logrado ({puntos.length - total})</span>
-        {mano && <span className="muted">Mano: {mano}</span>}
+        {mano && <span className="muted">Zona: {mano}</span>}
       </figcaption>
       {peor && peor.pct < 70 && <p className="reach-note">La zona <b>{peor.n.toLowerCase()}</b> es la más difícil ({peor.pct}% logrado). Podés achicar esa zona o agrandar los objetivos.</p>}
     </figure>
@@ -178,7 +186,8 @@ export function Semana({ sesiones }) {
 /* Mini curva para la lista de pacientes. */
 export function Sparkline({ valores, w = 96, h = 34 }) {
   if (valores.length < 2) return <span className="spark-empty" aria-hidden="true">—</span>;
-  const pts = valores.map((v, i) => [3 + (i * (w - 6)) / (valores.length - 1), 3 + (h - 6) * (1 - v / 100)]);
+  const top = Math.max(1, ...valores);
+  const pts = valores.map((v, i) => [3 + (i * (w - 6)) / (valores.length - 1), 3 + (h - 6) * (1 - v / top)]);
   const line = smooth(pts);
   return (
     <svg width={w} height={h} className="spark" aria-hidden="true">

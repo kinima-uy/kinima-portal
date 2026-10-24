@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { EJERCICIOS } from "../data/mock.js";
+import { EJERCICIOS } from "../data/ejercicios.js";
 import { Iso, COLORS } from "../lib/brand.jsx";
 import { PageHead, Icon } from "../components/ui.jsx";
 

@@ -2,12 +2,12 @@
 import { useEffect, useRef, useState } from "react";
 import * as api from "../lib/api.js";
 import { fecha, hora } from "../lib/util.js";
-import { ANIMOS, EJERCICIOS } from "../data/mock.js";
+import { ANIMOS, ej, configTexto } from "../data/ejercicios.js";
 import { Icon, Empty } from "./ui.jsx";
 
 export const DIAS = ["D", "L", "M", "M", "J", "V", "S"];
 const DIAS_LARGO = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
-export const ej = (id) => EJERCICIOS.find((e) => e.id === id);
+export { ej };
 export const diasTexto = (dias) => (dias.length === 7 ? "Todos los días" : [1, 2, 3, 4, 5, 6, 0].filter((d) => dias.includes(d)).map((d) => DIAS_LARGO[d].slice(0, 3)).join(" · "));
 
 export function Animo({ animo, comentario, compacto }) {
@@ -49,15 +49,15 @@ export function Sugerencia({ p, onCambio }) {
 }
 
 /* ---------- 2. Objetivos terapéuticos ---------- */
-const METRICAS = [["puntaje", "Puntaje promedio"], ["constancia", "Constancia del mes"], ["zona", "Alcance en una zona"]];
+const METRICAS = [["ritmo", "Aciertos por minuto"], ["constancia", "Constancia del mes (%)"], ["zona", "Alcance en una zona (%)"]];
 export function Metas({ p, onCambio, soloLectura }) {
   const [abierto, setAbierto] = useState(false);
-  const [f, setF] = useState({ texto: "", metrica: "puntaje", zona: "Arriba izq.", objetivo: 80, semanas: 4 });
+  const [f, setF] = useState({ texto: "", metrica: "ritmo", zona: "Arriba izq.", objetivo: 10, semanas: 4 });
   const guardar = async (e) => {
     e.preventDefault();
     if (!f.texto.trim()) return;
     const lim = new Date(); lim.setDate(lim.getDate() + f.semanas * 7);
-    const base = f.metrica === "constancia" ? p.constancia : f.metrica === "puntaje" ? (p.promedioSemana ?? 0) : 0;
+    const base = f.metrica === "constancia" ? (p.constancia ?? 0) : f.metrica === "ritmo" ? (p.ritmoSemana ?? 0) : 0;
     await api.agregarMeta({ pacienteId: p.id, texto: f.texto.trim(), metrica: f.metrica, zona: f.metrica === "zona" ? f.zona : undefined, base, objetivo: +f.objetivo, fechaLimite: lim.toISOString() });
     setAbierto(false); setF({ ...f, texto: "" }); onCambio();
   };
@@ -76,7 +76,7 @@ export function Metas({ p, onCambio, soloLectura }) {
               </div>
               <div className="bar" role="progressbar" aria-valuenow={m.avance} aria-valuemin="0" aria-valuemax="100" aria-label={`Avance: ${m.avance}%`}><i style={{ width: `${m.avance}%` }} /></div>
               <div className="meta-foot">
-                <span><b>{m.actual}%</b> de {m.objetivo}%{m.zona ? ` · ${m.zona}` : ""}</span>
+                <span><b>{m.actual}{m.unidad}</b> de {m.objetivo}{m.unidad}{m.zona ? ` · ${m.zona}` : ""}</span>
                 <span className="muted">{m.lograda ? "¡Lograda!" : `Hasta el ${fecha(m.fechaLimite, { day: "numeric", month: "short" })}`}</span>
               </div>
             </li>
@@ -96,7 +96,7 @@ export function Metas({ p, onCambio, soloLectura }) {
                 <select value={f.zona} onChange={(e) => setF({ ...f, zona: e.target.value })}>{Object.keys(api.ZONAS).map((z) => <option key={z}>{z}</option>)}</select>
               </label>
             )}
-            <label className="field"><span>Meta (%)</span><input type="number" min="1" max="100" value={f.objetivo} onChange={(e) => setF({ ...f, objetivo: e.target.value })} /></label>
+            <label className="field"><span>{f.metrica === "ritmo" ? "Meta (aciertos/min)" : "Meta (%)"}</span><input type="number" min="1" max={f.metrica === "ritmo" ? 60 : 100} value={f.objetivo} onChange={(e) => setF({ ...f, objetivo: e.target.value })} /></label>
             <label className="field"><span>Plazo</span>
               <select value={f.semanas} onChange={(e) => setF({ ...f, semanas: +e.target.value })}>{[2, 4, 6, 8, 12].map((n) => <option key={n} value={n}>{n} semanas</option>)}</select>
             </label>
@@ -152,7 +152,7 @@ export function Familia({ p, autor, onCambio }) {
             {conAnimo.map((s) => (
               <li key={s.id} className={`feel-${s.animo}`}>
                 <span className="feel-emoji" aria-hidden="true">{ANIMOS[s.animo].emoji}</span>
-                <div><b>{ANIMOS[s.animo].t}</b><small>{fecha(s.fecha, { weekday: "short", day: "numeric", month: "short" })} · {s.puntaje} pts</small>{s.comentarioFamilia && <p>“{s.comentarioFamilia}”</p>}</div>
+                <div><b>{ANIMOS[s.animo].t}</b><small>{fecha(s.fecha, { weekday: "short", day: "numeric", month: "short" })} · {s.aciertos} aciertos</small>{s.comentarioFamilia && <p>“{s.comentarioFamilia}”</p>}</div>
               </li>
             ))}
           </ul>
@@ -167,16 +167,18 @@ export function Rutina({ a }) {
   if (!a) return <Empty icon="asignar" title="Sin rutina">Asignale una rutina y una consola para que pueda empezar en casa.</Empty>;
   return (
     <div className="rutina">
-      <div className="dias" aria-label={`Días: ${diasTexto(a.dias)}`}>
-        {[1, 2, 3, 4, 5, 6, 0].map((d) => <span key={d} className={a.dias.includes(d) ? "on" : ""} aria-hidden="true">{DIAS[d]}</span>)}
-      </div>
+      {a.dias && (
+        <div className="dias" aria-label={`Días: ${diasTexto(a.dias)}`}>
+          {[1, 2, 3, 4, 5, 6, 0].map((d) => <span key={d} className={a.dias.includes(d) ? "on" : ""} aria-hidden="true">{DIAS[d]}</span>)}
+        </div>
+      )}
       <ol className="bloques">
         {a.bloques.map((b, i) => (
           <li key={i}>
             <span className="bnum" aria-hidden="true">{i + 1}</span>
             <div>
               <b>{ej(b.ejercicioId)?.nombre}</b>
-              <small>{ej(b.ejercicioId)?.campos.map((c) => `${b.config[c.id]}${c.unidad ? ` ${c.unidad}` : ""}`).join(" · ")}</small>
+              <small>{configTexto(b)}</small>
             </div>
           </li>
         ))}

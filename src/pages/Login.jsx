@@ -1,13 +1,44 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { Logo } from "../lib/brand.jsx";
 import { Cintas, Personitas } from "../components/viz.jsx";
 import { useAuth } from "../lib/auth.jsx";
+import * as api from "../lib/api.js";
 import { USING_MOCK } from "../lib/api.js";
 import { Icon } from "../components/ui.jsx";
 
+/* Primera vez: no existe ninguna cuenta administradora. Se crea con el código inicial (BOOTSTRAP_TOKEN de Vercel). */
+function PrimeraCuenta({ onListo }) {
+  const [f, setF] = useState({ bootstrapToken: "", nombre: "", email: "", password: "" });
+  const [error, setError] = useState("");
+  const [enviando, setEnviando] = useState(false);
+  const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
+  const enviar = async (e) => {
+    e.preventDefault();
+    if (!f.bootstrapToken || f.nombre.trim().length < 2 || !f.email.trim() || f.password.length < 12) { setError("Completá todo. La contraseña necesita al menos 12 caracteres."); return; }
+    setEnviando(true); setError("");
+    try { onListo(await api.crearAdminInicial(f)); } catch (err) { setError(err.message); setEnviando(false); }
+  };
+  return (
+    <form className="login-form" onSubmit={enviar} noValidate>
+      <div className="login-mobile-logo"><Logo height={30} /></div>
+      <p className="eyebrow">Primera vez</p>
+      <h1>Crear la cuenta administradora</h1>
+      <p className="muted">Todavía no hay ninguna cuenta. Usá el código inicial que está guardado en Vercel (BOOTSTRAP_TOKEN). Después conviene borrarlo de Vercel.</p>
+      <label className="field"><span>Código inicial</span><input type="password" value={f.bootstrapToken} onChange={set("bootstrapToken")} autoComplete="off" /></label>
+      <label className="field"><span>Nombre</span><input value={f.nombre} onChange={set("nombre")} autoComplete="name" /></label>
+      <label className="field"><span>Mail</span><input type="email" value={f.email} onChange={set("email")} autoComplete="username" /></label>
+      <label className="field"><span>Contraseña</span><input type="password" value={f.password} onChange={set("password")} autoComplete="new-password" placeholder="Mínimo 12 caracteres" /></label>
+      {error && <p className="form-error" role="alert"><Icon name="alerta" size={16} />{error}</p>}
+      <button className="btn btn-navy btn-block" disabled={enviando}>{enviando ? "Creando…" : "Crear cuenta e ingresar"}</button>
+    </form>
+  );
+}
+
 export default function Login() {
-  const { profesional, entrar } = useAuth();
+  const { profesional, entrar, iniciar } = useAuth();
+  const [setup, setSetup] = useState(false);
+  useEffect(() => { api.getSetupStatus().then((s) => setSetup(!!s.needsFirstAdmin)).catch(() => {}); }, []);
   const nav = useNavigate();
   const loc = useLocation();
   const [email, setEmail] = useState("");
@@ -43,6 +74,7 @@ export default function Login() {
       </section>
 
       <section className="login-form-wrap">
+        {setup ? <PrimeraCuenta onListo={(s) => { iniciar(s); nav("/pacientes", { replace: true }); }} /> :
         <form className="login-form" onSubmit={submit} noValidate>
           <div className="login-mobile-logo"><Logo height={30} /></div>
           <p className="eyebrow">Portal profesional</p>
@@ -76,7 +108,7 @@ export default function Login() {
             </div>
           )}
           <p className="login-foot"><Icon name="candado" size={14} />Conexión segura · Solo profesionales autorizados</p>
-        </form>
+        </form>}
       </section>
     </div>
   );
