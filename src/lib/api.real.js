@@ -50,7 +50,7 @@ const asignacion = (a, pacienteId) => ({
   id: a.id, pacienteId, consolaId: a.deviceId, consolaCodigo: a.deviceCode, version: a.version, creada: a.createdAt, estado: a.status,
   motivo: null, dias: null, bloques: [{ ejercicioId: "objetivos", config: configDeApi(a.exercise) }],
 });
-const paciente = (p) => ({ id: p.id, codigo: p.localCode, etiqueta: p.displayLabel, edad: null, inicio: p.createdAt, objetivoSemanal: null, nota: null });
+const paciente = (p) => ({ id: p.id, codigo: p.localCode, etiqueta: p.displayLabel, edad: null, inicio: p.createdAt, objetivoSemanal: null, nota: null, sinLeer: p.sinLeer || 0 });
 
 /* Sugerencias descartadas: se recuerdan en este navegador. */
 const DESC = "kinima-sugerencias-descartadas";
@@ -101,7 +101,9 @@ export async function getPacientes() { return (await cargarTodo()).lista.map((x)
 export async function getPaciente(id) {
   const x = (await cargarTodo()).lista.find((y) => y.r.id === id);
   if (!x) throw new Error("No encontramos ese paciente o no tenés acceso.");
-  return { ...x.r, sesiones: [...x.ses].sort((a, b) => a.fecha.localeCompare(b.fecha)), historial: [...x.asigs].sort((a, b) => b.creada.localeCompare(a.creada)), alcance: null, metas: [], mensajes: [], profesional: null };
+  const { messages } = await req(`/professional/patients/${id}/messages`);
+  const mensajes = messages.map((m) => ({ id: m.id, pacienteId: id, de: m.de, texto: m.texto, fecha: m.fecha, leido: m.leido, autor: m.autor }));
+  return { ...x.r, sesiones: [...x.ses].sort((a, b) => a.fecha.localeCompare(b.fecha)), historial: [...x.asigs].sort((a, b) => b.creada.localeCompare(a.creada)), alcance: null, metas: [], mensajes, profesional: null };
 }
 export async function crearPaciente({ codigo, etiqueta }) {
   const r = await req("/professional/patients", { method: "POST", body: { localCode: codigo.trim(), displayLabel: etiqueta.trim() } });
@@ -178,6 +180,16 @@ export async function crearFamilia({ pacienteId, email, nombre }) {
 export const quitarAccesoFamilia = (pacienteId, familyId) => req(`/professional/patients/${pacienteId}/family-access`, { method: "DELETE", body: { familyId } });
 
 /* ---------- todavía sin lugar en la API (el portal oculta estas funciones) ---------- */
+export async function enviarMensaje(pacienteId, texto, autor) {
+  const r = await req(`/professional/patients/${pacienteId}/messages`, { method: "POST", body: { texto, autor } });
+  cache = null;
+  return { id: r.mensaje.id, pacienteId, de: r.mensaje.de, texto: r.mensaje.texto, fecha: r.mensaje.fecha, leido: r.mensaje.leido, autor: r.mensaje.autor };
+}
+export async function marcarLeidos(pacienteId) {
+  await req(`/professional/patients/${pacienteId}/messages/read`, { method: "POST" });
+  cache = null;
+  return { ok: true };
+}
 const pronto = () => Promise.reject(new Error("Esta función todavía no está disponible con la base de datos real."));
-export const guardarNota = pronto, agregarMeta = pronto, borrarMeta = pronto, enviarMensaje = pronto, marcarLeidos = pronto, guardarPlantilla = pronto, setProfesionalActivo = pronto;
+export const guardarNota = pronto, agregarMeta = pronto, borrarMeta = pronto, guardarPlantilla = pronto, setProfesionalActivo = pronto;
 export const ZONAS = {};

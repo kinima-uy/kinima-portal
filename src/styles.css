@@ -629,3 +629,25 @@ main:focus,main:focus-visible{outline:none}
 .f-aciertos{flex:none;display:flex;flex-direction:column;align-items:center;gap:2px;font-weight:800}
 .f-aciertos small{font-weight:700;color:var(--muted);font-size:11px;text-transform:uppercase}
 .f-estado{flex:none}
+
+/* ---------- campanita de mensajes (notificaciones) ---------- */
+.topbar-end{display:flex;align-items:center;gap:6px;margin-left:auto}
+.sb-top{position:relative}
+.sb-top .notif-bell{position:absolute;top:0;right:0}
+.sb-top .notif-bell .icon-btn{color:#C8D3DE}
+.sb-top .notif-bell .icon-btn:hover{background:rgba(255,255,255,.1);color:var(--cream)}
+.notif-bell{position:relative}
+.notif-bell .icon-btn{position:relative}
+.notif-badge{position:absolute;top:2px;right:2px;min-width:16px;height:16px;font-size:10px;padding:0 4px;margin-left:0}
+.notif-panel{position:absolute;top:calc(100% + 8px);right:0;width:min(320px,88vw);background:var(--white);border-radius:16px;box-shadow:0 12px 32px rgba(15,34,54,.22);border:1px solid var(--line);z-index:50;overflow:hidden;color:var(--navy)}
+.notif-panel-head{font-weight:800;font-size:14px;padding:14px 16px 10px;border-bottom:1px solid var(--line)}
+.notif-empty{padding:16px;font-size:14px}
+.notif-panel ul{list-style:none;margin:0;padding:6px;max-height:320px;overflow-y:auto}
+.notif-panel li button{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;text-align:left;border:0;background:transparent;border-radius:10px;padding:10px;cursor:pointer;font:inherit;color:inherit}
+.notif-panel li button:hover{background:var(--tint-teal)}
+.notif-pac{display:flex;flex-direction:column;min-width:0}
+.notif-pac b{font-size:14px}
+.notif-pac small{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media (max-width:900px){
+  .sb-top .notif-bell{top:10px;right:52px}
+}

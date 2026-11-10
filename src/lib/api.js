@@ -4,8 +4,9 @@
  *  · Modo demo (VITE_MODO=demo, y la vista previa): datos de prueba en memoria, para mostrar y diseñar.
  * Las pantallas usan siempre estas mismas funciones.
  *
- * CAP dice qué funciones tienen dónde guardarse. Las que la API todavía no tiene (mensajes, objetivos,
+ * CAP dice qué funciones tienen dónde guardarse. Las que la API todavía no tiene (objetivos,
  * notas, días de la semana, varios bloques, plantillas, ánimo, mapa de alcance) se ocultan con la API real.
+ * Los mensajes con la familia ya tienen tabla y rutas propias, así que CAP.mensajes queda siempre en true.
  */
 import * as mock from "./api.mock.js";
 import * as real from "./api.real.js";
@@ -15,7 +16,7 @@ const impl = USING_MOCK ? mock : real;
 
 export const CAP = USING_MOCK
   ? { dias: true, maxBloques: 3, plantillas: true, mensajes: true, metas: true, notas: true, animo: true, alcance: true, edad: true, desactivarProfesional: true }
-  : { dias: false, maxBloques: 1, plantillas: false, mensajes: false, metas: false, notas: false, animo: false, alcance: false, edad: false, desactivarProfesional: false };
+  : { dias: false, maxBloques: 1, plantillas: false, mensajes: true, metas: false, notas: false, animo: false, alcance: false, edad: false, desactivarProfesional: false };
 
 const f = (name) => (...args) => impl[name](...args);
 export const login = f("login"), salir = f("salir"), getSetupStatus = f("getSetupStatus"), crearAdminInicial = f("crearAdminInicial");
