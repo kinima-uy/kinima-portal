@@ -634,6 +634,7 @@ main:focus,main:focus-visible{outline:none}
 .topbar-end{display:flex;align-items:center;gap:6px;margin-left:auto}
 .sb-top{position:relative}
 .sb-top .notif-bell{position:absolute;top:0;right:0}
+.sb-top .notif-panel{position:fixed;top:64px;left:12px;right:auto;width:min(320px,calc(100vw - 24px));max-height:min(420px,70vh)}
 .sb-top .notif-bell .icon-btn{color:#C8D3DE}
 .sb-top .notif-bell .icon-btn:hover{background:rgba(255,255,255,.1);color:var(--cream)}
 .notif-bell{position:relative}
