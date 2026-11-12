@@ -3,7 +3,7 @@ import * as api from "./api.js";
 import { CAP } from "./api.js";
 import { reproducirSonidoMensaje } from "./sonido.js";
 
-const INTERVALO = 20000; // cada 20s busca mensajes nuevos de la familia
+const INTERVALO = 5000; // cada 5s busca mensajes nuevos de la familia
 
 /*
  * Mensajes sin leer de todos los pacientes de este profesional: suena al abrir el portal si ya
