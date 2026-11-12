@@ -77,7 +77,7 @@ export function resumen(p, { sesiones, asignaciones, consola, extras = {} }) {
     constancia,
     racha: racha(ses),
     sugerencia: sugerencia(asig, ses, extras.descartada?.(asig)),
-    sinLeer: extras.sinLeer || 0,
+    sinLeer: p.sinLeer || 0,
     ultimoAnimo: ses.find((s) => s.animo)?.animo || null,
   };
 }
