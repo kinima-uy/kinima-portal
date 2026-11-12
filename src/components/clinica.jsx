@@ -115,13 +115,22 @@ export function Familia({ p, autor, onCambio }) {
   const [enviando, setEnviando] = useState(false);
   const endRef = useRef(null);
   useEffect(() => { if (p.sinLeer) api.marcarLeidos(p.id).then(onCambio); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setLista(p.mensajes); }, [p.mensajes]);
+  // Sondea cada pocos segundos mientras esta pestaña está abierta, para que los mensajes que
+  // manda la familia aparezcan solos, sin tener que recargar la página.
+  useEffect(() => {
+    const intervalo = setInterval(() => { onCambio(); }, 4000);
+    return () => clearInterval(intervalo);
+  }, [onCambio]);
   useEffect(() => { endRef.current?.scrollIntoView({ block: "nearest" }); }, [lista.length]);
   const enviar = async (e) => {
     e.preventDefault();
     if (!texto.trim()) return;
     setEnviando(true);
-    const m = await api.enviarMensaje(p.id, texto.trim(), autor);
-    setLista((l) => [...l, m]); setTexto(""); setEnviando(false);
+    await api.enviarMensaje(p.id, texto.trim(), autor);
+    setTexto("");
+    setEnviando(false);
+    onCambio();
   };
   const conAnimo = [...p.sesiones].reverse().filter((s) => s.animo).slice(0, 6);
 
